@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Marine Life AI Detector</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image/dist/teachablemachine-image.min.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Inter,sans-serif;
+  color:white;
+  display:flex;
+  justify-content:center;
+  padding:25px;
+
+  background:linear-gradient(-45deg,#06121f,#0b1f33,#0a2a3d,#06121f);
+  background-size:400% 400%;
+  animation:flow 12s ease infinite;
+}
+
+@keyframes flow{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+
+.container{
+  width:100%;
+  max-width:1200px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:22px;
+}
+
+/* ===== GLASS PANEL (YOUR DESIGN) ===== */
+.panel{
+  background:rgba(18,26,43,0.75);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  padding:22px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 10px 30px rgba(0,0,0,0.35);
+  transition:0.3s;
+}
+
+.panel:hover{
+  transform:translateY(-4px);
+  border-color:#4cc9f0;
+  box-shadow:0 15px 40px rgba(76,201,240,0.15);
+}
+
+h2{
+  margin-top:0;
+  color:#4cc9f0;
+}
+
+/* INPUT */
+input,button{
+  width:100%;
+  margin-top:12px;
+  padding:11px;
+  border-radius:12px;
+  border:none;
+}
+
+input{
+  background:#0e1626;
+  color:white;
+}
+
+button{
+  background:linear-gradient(90deg,#4cc9f0,#7b2cbf);
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+}
+
+/* PREVIEW */
+.preview-box{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+img,video{
+  width:100%;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.1);
+}
+
+/* RESULT */
+#result{
+  margin-top:15px;
+  font-weight:bold;
+  font-size:18px;
+}
+
+/* CONFIDENCE CHART */
+.bar-container{
+  margin-top:15px;
+}
+
+.bar{
+  margin:10px 0;
+  padding:10px;
+  border-radius:12px;
+  background:#0e1626;
+  border:1px solid rgba(255,255,255,0.05);
+}
+
+.label{
+  display:flex;
+  justify-content:space-between;
+  font-size:14px;
+  margin-bottom:6px;
+}
+
+.progress{
+  height:12px;
+  background:#1e2a3a;
+  border-radius:8px;
+  overflow:hidden;
+}
+
+.fill{
+  height:100%;
+  width:0%;
+  border-radius:8px;
+  transition:0.6s ease;
+}
+
+/* HISTORY LOG */
+.history{
+  margin-top:15px;
+  max-height:260px;
+  overflow-y:auto;
+}
+
+.log-item{
+  background:#0e1626;
+  padding:10px;
+  border-radius:10px;
+  margin-bottom:10px;
+  border:1px solid rgba(255,255,255,0.05);
+  animation:fade 0.3s ease;
+}
+
+@keyframes fade{
+  from{opacity:0; transform:translateY(8px);}
+  to{opacity:1; transform:translateY(0);}
+}
+
+.log-title{
+  color:#4cc9f0;
+  font-weight:600;
+  margin-bottom:4px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- LEFT PANEL -->
+<div class="panel">
+  <h2>Marine Life Detector</h2>
+
+  <input type="file" id="imageUpload" accept="image/*">
+
+  <button onclick="startCamera()">Open Camera</button>
+  <button onclick="captureImage()">Capture</button>
+
+  <video id="camera" autoplay playsinline></video>
+
+  <canvas id="canvasCapture" style="display:none"></canvas>
+
+  <!-- HISTORY (LEFT SIDE) -->
+  <h2 style="margin-top:20px;font-size:16px;">Prediction History</h2>
+  <div id="history" class="history"></div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="panel">
+  <h2>Marine Life</h2>
+
+  <div class="preview-box">
+    <div>
+      <p>Camera</p>
+      <img id="cameraPreview">
+    </div>
+
+    <div>
+      <p>Upload</p>
+      <img id="uploadPreview">
+    </div>
+  </div>
+
+  <div id="result">Loading model...</div>
+
+  <div id="bars" class="bar-container"></div>
+</div>
+
+</div>
+
+<script>
+const URL = "https://teachablemachine.withgoogle.com/models/0M67tI_Pt/";
+
+let model, ready=false;
+
+const camera = document.getElementById("camera");
+const cameraPreview = document.getElementById("cameraPreview");
+const uploadPreview = document.getElementById("uploadPreview");
+
+const canvasCapture = document.getElementById("canvasCapture");
+
+const result = document.getElementById("result");
+const bars = document.getElementById("bars");
+const history = document.getElementById("history");
+
+// LOAD MODEL
+async function loadModel(){
+  model = await tmImage.load(URL+"model.json", URL+"metadata.json");
+  ready = true;
+  result.innerText = "Model Ready";
+}
+loadModel();
+
+// HISTORY LOG
+function addHistory(source, best, confidence){
+  const time = new Date().toLocaleTimeString();
+
+  const item = document.createElement("div");
+  item.className = "log-item";
+
+  item.innerHTML = `
+    <div class="log-title">${source} DETECTION</div>
+    <div>Class: <b>${best}</b></div>
+    <div>Confidence: <b>${confidence}%</b></div>
+    <div style="opacity:0.6;font-size:11px;">${time}</div>
+  `;
+
+  history.prepend(item);
+}
+
+// PREDICT
+async function predict(img){
+  if(!ready) return;
+
+  const predictions = await model.predict(img);
+
+  let best = predictions.reduce((a,b)=>a.probability>b.probability?a:b);
+  const confidence = (best.probability*100).toFixed(2);
+
+  result.innerHTML = `${best.className} (${confidence}%)`;
+
+  let sourceType = (img.id === "cameraPreview") ? "CAMERA" : "UPLOAD";
+
+  addHistory(sourceType, best.className, confidence);
+
+  bars.innerHTML = "";
+
+  predictions
+    .sort((a,b)=>b.probability - a.probability)
+    .forEach((p,i)=>{
+
+      const percent = (p.probability*100).toFixed(2);
+
+      const r = Math.floor(76 + (179 * p.probability));
+      const g = 201;
+      const b = Math.floor(240 - (120 * p.probability));
+
+      const color = `rgb(${r},${g},${b})`;
+
+      bars.innerHTML += `
+        <div class="bar">
+          <div class="label">
+            <span>${p.className}</span>
+            <span>${percent}%</span>
+          </div>
+
+          <div class="progress">
+            <div class="fill"
+              id="bar-${i}"
+              style="background:linear-gradient(90deg,${color},#7b2cbf)">
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+  setTimeout(()=>{
+    predictions.forEach((p,i)=>{
+      const percent = (p.probability*100).toFixed(2);
+      const bar = document.getElementById(`bar-${i}`);
+      if(bar) bar.style.width = percent + "%";
+    });
+  },50);
+}
+
+// CAMERA
+async function startCamera(){
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:"environment"}
+  });
+  camera.srcObject = stream;
+}
+
+// CAPTURE
+function captureImage(){
+  const ctx = canvasCapture.getContext("2d");
+
+  canvasCapture.width = 300;
+  canvasCapture.height = 220;
+
+  ctx.drawImage(camera,0,0,300,220);
+
+  cameraPreview.src = canvasCapture.toDataURL();
+  cameraPreview.onload = ()=>predict(cameraPreview);
+}
+
+// UPLOAD
+document.getElementById("imageUpload").onchange=e=>{
+  const file=e.target.files[0];
+  const reader=new FileReader();
+
+  reader.onload=ev=>{
+    uploadPreview.src=ev.target.result;
+    uploadPreview.onload=()=>predict(uploadPreview);
+  };
+
+  reader.readAsDataURL(file);
+};
+</script>
+
+</body>
+</html>
