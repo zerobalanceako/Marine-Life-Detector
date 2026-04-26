@@ -5,10 +5,14 @@ const BASE_PATH = "/Marine-Life-Detector/";
 const ASSETS = [
   BASE_PATH,
   BASE_PATH + "index.html",
-  BASE_PATH + "style.css",
-  BASE_PATH + "script.js",
-  BASE_PATH + "web-app-manifest-192x192.png",
-  BASE_PATH + "web-app-manifest-512x512.png"
+  BASE_PATH + "manifest.json",
+  BASE_PATH + "model.json",
+  BASE_PATH + "metadata.json",
+  BASE_PATH + "weights.bin",
+
+  // your real icons
+  BASE_PATH + "web-app-manifest-192.png",
+  BASE_PATH + "web-app-manifest-512.png"
 ];
 
 // Install: cache essential files
