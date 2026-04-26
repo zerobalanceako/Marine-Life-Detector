@@ -7,8 +7,8 @@ const ASSETS = [
   BASE_PATH + "index.html",
   BASE_PATH + "style.css",
   BASE_PATH + "script.js",
-  BASE_PATH + "icon-192.png",
-  BASE_PATH + "icon-512.png"
+  BASE_PATH + "web-app-manifest-192x192.png",
+  BASE_PATH + "web-app-manifest-512x512.png"
 ];
 
 // Install: cache essential files
