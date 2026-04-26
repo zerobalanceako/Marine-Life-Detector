@@ -6,9 +6,6 @@ const ASSETS = [
   BASE_PATH,
   BASE_PATH + "index.html",
   BASE_PATH + "manifest.json",
-  BASE_PATH + "model.json",
-  BASE_PATH + "metadata.json",
-  BASE_PATH + "weights.bin",
 
   // your real icons
   BASE_PATH + "web-app-manifest-192.png",
