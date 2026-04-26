@@ -5,7 +5,6 @@ const BASE_PATH = "/Marine-Life-Detector/";
 const ASSETS = [
   BASE_PATH,
   BASE_PATH + "index.html",
-  BASE_PATH + "manifest.json",
 
   // your real icons
   BASE_PATH + "web-app-manifest-192.png",
