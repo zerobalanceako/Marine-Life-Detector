@@ -10,8 +10,8 @@ const ASSETS = [
   BASE_PATH + "model.json",
   BASE_PATH + "metadata.json",
   BASE_PATH + "weights.bin",
-  BASE_PATH + "web-app-manifest-192x192.png",
-  BASE_PATH + "web-app-manifest-512x512.png",
+  BASE_PATH + "icon192.png",
+  BASE_PATH + "icon512.png",
 ];
 
 // INSTALL
