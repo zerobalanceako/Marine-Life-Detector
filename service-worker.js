@@ -1,7 +1,7 @@
-const CACHE_NAME = "marine-life-cache-v1";
+const CACHE_NAME = "marine-life-cache-v2";
 const BASE_PATH = "/Marine-Life-Detector/";
 
-// Core files that exist in your repo
+// Core stable files ONLY
 const ASSETS = [
   BASE_PATH,
   BASE_PATH + "index.html",
@@ -9,13 +9,10 @@ const ASSETS = [
 
   BASE_PATH + "model.json",
   BASE_PATH + "metadata.json",
-  BASE_PATH + "weights.bin",
-
-  BASE_PATH + "web-app-manifest-192.png",
-  BASE_PATH + "web-app-manifest-512.png"
+  BASE_PATH + "weights.bin"
 ];
 
-// INSTALL: cache assets safely (no crash on missing file)
+// INSTALL
 self.addEventListener("install", event => {
   event.waitUntil(
     (async () => {
@@ -43,7 +40,7 @@ self.addEventListener("install", event => {
   self.skipWaiting();
 });
 
-// ACTIVATE: remove old caches
+// ACTIVATE
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -61,7 +58,7 @@ self.addEventListener("activate", event => {
   self.clients.claim();
 });
 
-// FETCH: cache-first strategy
+// FETCH
 self.addEventListener("fetch", event => {
   event.respondWith(
     caches.match(event.request).then(cached => {
@@ -69,10 +66,7 @@ self.addEventListener("fetch", event => {
 
       return fetch(event.request)
         .then(response => {
-          // only cache valid responses
-          if (!response || response.status !== 200) {
-            return response;
-          }
+          if (!response || response.status !== 200) return response;
 
           const clone = response.clone();
 
@@ -83,7 +77,6 @@ self.addEventListener("fetch", event => {
           return response;
         })
         .catch(() => {
-          // fallback for navigation
           if (event.request.mode === "navigate") {
             return caches.match(BASE_PATH + "index.html");
           }
