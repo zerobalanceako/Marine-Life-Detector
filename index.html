@@ -2,334 +2,818 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Marine Life AI Detector</title>
-
-<link rel="manifest" href="manifest.json">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Marine Life Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image/dist/teachablemachine-image.min.js"></script>
 
 <style>
-body{
-  margin:0;
-  font-family:Inter,sans-serif;
-  color:white;
-  display:flex;
-  justify-content:center;
-  padding:25px;
+/* ===================== RESET & BASE ===================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  background:linear-gradient(-45deg,#06121f,#0b1f33,#0a2a3d,#06121f);
-  background-size:400% 400%;
-  animation:flow 12s ease infinite;
+:root {
+  --bg-deep:    #020d14;
+  --bg-card:    rgba(5, 22, 36, 0.82);
+  --border:     rgba(120, 220, 232, 0.14);
+  --accent:     #39d0d8;
+  --accent2:    #0fa3b1;
+  --accent-glow:rgba(57, 208, 216, 0.22);
+  --text:       #e4f3f5;
+  --text-muted: #6fa3ad;
+  --danger:     #ff6b6b;
+  --success:    #39d0d8;
+  --font-head:  'Syne', sans-serif;
+  --font-body:  'DM Sans', sans-serif;
+  --radius-lg:  20px;
+  --radius-md:  14px;
+  --radius-sm:  10px;
+  --shadow:     0 8px 32px rgba(0,0,0,0.45);
 }
 
-@keyframes flow{
-  0%{background-position:0% 50%}
-  50%{background-position:100% 50%}
-  100%{background-position:0% 50%}
+html, body {
+  min-height: 100%;
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-.container{
-  width:100%;
-  max-width:1200px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:22px;
+body {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,120,140,0.28) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(9,60,90,0.35) 0%, transparent 60%),
+    var(--bg-deep);
+  padding: 0 0 48px;
 }
 
-.panel{
-  background:rgba(18,26,43,0.75);
-  backdrop-filter:blur(14px);
-  -webkit-backdrop-filter:blur(14px);
-  padding:22px;
-  border-radius:18px;
-  border:1px solid rgba(255,255,255,0.08);
-  box-shadow:0 10px 30px rgba(0,0,0,0.35);
-  transition:0.3s;
+/* ===================== HEADER ===================== */
+header {
+  text-align: center;
+  padding: 36px 20px 24px;
+  position: relative;
 }
 
-.panel:hover{
-  transform:translateY(-4px);
-  border-color:#4cc9f0;
-  box-shadow:0 15px 40px rgba(76,201,240,0.15);
+.logo-ring {
+  width: 64px; height: 64px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #1ae0ec, #0a4f66);
+  box-shadow: 0 0 0 6px rgba(57,208,216,0.12), 0 0 28px rgba(57,208,216,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  animation: pulse 3s ease-in-out infinite;
 }
 
-h2{
-  margin-top:0;
-  color:#4cc9f0;
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 6px rgba(57,208,216,0.12), 0 0 28px rgba(57,208,216,0.3); }
+  50%      { box-shadow: 0 0 0 10px rgba(57,208,216,0.06), 0 0 48px rgba(57,208,216,0.5); }
 }
 
-input,button{
-  width:100%;
-  margin-top:12px;
-  padding:11px;
-  border-radius:12px;
-  border:none;
+header h1 {
+  font-family: var(--font-head);
+  font-size: clamp(22px, 6vw, 32px);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #fff;
 }
 
-input{
-  background:#0e1626;
-  color:white;
+header h1 span { color: var(--accent); }
+
+header p {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
 }
 
-button{
-  background:linear-gradient(90deg,#4cc9f0,#7b2cbf);
-  color:white;
-  font-weight:600;
-  cursor:pointer;
+/* ===================== MAIN LAYOUT ===================== */
+.main {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.preview-box{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
+/* ===================== CARD ===================== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 
-img,video{
-  width:100%;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,0.1);
+.card:focus-within,
+.card.active {
+  border-color: rgba(57,208,216,0.35);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(57,208,216,0.1);
 }
 
-#result{
-  margin-top:15px;
-  font-weight:bold;
-  font-size:18px;
+.card-label {
+  font-family: var(--font-head);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
 }
 
-.bar-container{
-  margin-top:15px;
+/* ===================== IMAGE AREA ===================== */
+.image-area {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: rgba(0,0,0,0.35);
+  border: 1.5px dashed rgba(57,208,216,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.bar{
-  margin:10px 0;
-  padding:10px;
-  border-radius:12px;
-  background:#0e1626;
-  border:1px solid rgba(255,255,255,0.05);
+.image-area video,
+.image-area img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+  border: none;
+  display: block;
 }
 
-.label{
-  display:flex;
-  justify-content:space-between;
-  font-size:14px;
-  margin-bottom:6px;
+.image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  pointer-events: none;
+  transition: opacity 0.3s;
 }
 
-.progress{
-  height:12px;
-  background:#1e2a3a;
-  border-radius:8px;
-  overflow:hidden;
+.image-placeholder .icon { font-size: 36px; opacity: 0.5; }
+
+/* scan line when active */
+.scan-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0;
+  top: 0;
+  transition: opacity 0.3s;
 }
 
-.fill{
-  height:100%;
-  width:0%;
-  border-radius:8px;
-  transition:0.6s ease;
+.image-area.scanning .scan-line {
+  opacity: 1;
+  animation: scanMove 1.6s linear infinite;
 }
 
-.history{
-  margin-top:15px;
-  max-height:260px;
-  overflow-y:auto;
+@keyframes scanMove {
+  0%   { top: 0%; }
+  100% { top: 100%; }
 }
 
-.log-item{
-  background:#0e1626;
-  padding:10px;
-  border-radius:10px;
-  margin-bottom:10px;
-  border:1px solid rgba(255,255,255,0.05);
+/* corner accents */
+.image-area::before,
+.image-area::after {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  border-color: var(--accent);
+  border-style: solid;
+  opacity: 0.6;
+  z-index: 2;
+}
+.image-area::before { top: 8px; left: 8px; border-width: 2px 0 0 2px; border-radius: 3px 0 0 0; }
+.image-area::after  { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; border-radius: 0 0 3px 0; }
+
+/* ===================== BUTTONS ===================== */
+.btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
 }
 
-.log-title{
-  color:#4cc9f0;
-  font-weight:600;
-  margin-bottom:4px;
+.btn {
+  position: relative;
+  padding: 14px 16px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-head);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.btn:active { transform: scale(0.96); }
+
+.btn-primary {
+  background: linear-gradient(135deg, #0fa3b1 0%, #39d0d8 100%);
+  color: #001a1f;
+  box-shadow: 0 4px 18px rgba(57,208,216,0.3);
+}
+.btn-primary:hover { box-shadow: 0 6px 24px rgba(57,208,216,0.45); filter: brightness(1.06); }
+
+.btn-secondary {
+  background: rgba(57,208,216,0.1);
+  color: var(--accent);
+  border: 1px solid rgba(57,208,216,0.25);
+}
+.btn-secondary:hover { background: rgba(57,208,216,0.16); }
+
+.btn-full {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, #0a6e7a, #0fa3b1);
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(10,110,122,0.35);
+}
+
+.btn .btn-icon { font-size: 17px; }
+
+/* ripple */
+.btn::after {
+  content: '';
+  position: absolute;
+  width: 0; height: 0;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  transition: width 0.4s, height 0.4s, opacity 0.4s;
+  opacity: 0;
+}
+.btn:active::after { width: 200px; height: 200px; opacity: 0; }
+
+/* upload label as button */
+.upload-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 14px 16px;
+  background: rgba(57,208,216,0.1);
+  color: var(--accent);
+  border: 1px solid rgba(57,208,216,0.25);
+  border-radius: var(--radius-md);
+  font-family: var(--font-head);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.upload-label:hover { background: rgba(57,208,216,0.16); }
+.upload-label:active { transform: scale(0.96); }
+#imageUpload { display: none; }
+
+/* ===================== STATUS BADGE ===================== */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 100px;
+  background: rgba(57,208,216,0.08);
+  border: 1px solid rgba(57,208,216,0.18);
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+
+.status-badge .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.3s;
+}
+.status-badge.ready .dot { background: #39d0d8; box-shadow: 0 0 6px #39d0d8; }
+.status-badge.error .dot { background: var(--danger); }
+
+/* ===================== RESULT CARD ===================== */
+.result-card {
+  transition: all 0.4s;
+}
+
+.result-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.result-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #063040, #0a6e7a);
+  border: 1px solid rgba(57,208,216,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+.result-name {
+  font-family: var(--font-head);
+  font-size: clamp(18px, 5vw, 22px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.result-conf {
+  font-size: 13px;
+  color: var(--accent);
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+.result-empty {
+  text-align: center;
+  padding: 24px 0 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.result-empty .em-icon { font-size: 40px; margin-bottom: 8px; opacity: 0.4; }
+
+/* ===================== CONFIDENCE BARS ===================== */
+.bar-list { display: flex; flex-direction: column; gap: 10px; }
+
+.bar-item {}
+
+.bar-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
+.bar-meta .bar-name { font-weight: 500; color: var(--text); }
+
+.bar-track {
+  height: 7px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 100px;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  width: 0%;
+  transition: width 0.7s cubic-bezier(.22,1,.36,1);
+}
+
+/* ===================== HISTORY ===================== */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.history-list::-webkit-scrollbar { width: 3px; }
+.history-list::-webkit-scrollbar-thumb { background: rgba(57,208,216,0.2); border-radius: 2px; }
+
+.history-item {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.h-icon {
+  font-size: 20px;
+  width: 34px; height: 34px;
+  background: rgba(57,208,216,0.08);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.h-info { flex: 1; min-width: 0; }
+.h-name {
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.h-meta { font-size: 11px; color: var(--text-muted); }
+
+.h-conf {
+  font-family: var(--font-head);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.history-empty {
+  text-align: center;
+  padding: 18px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ===================== CANVAS (hidden) ===================== */
+#canvasCapture { display: none; }
+
+/* ===================== DESKTOP (wider) ===================== */
+@media (min-width: 640px) {
+  .main { max-width: 900px; }
+  .desktop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+}
+
+/* ===================== LOADING OVERLAY ===================== */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,13,20,0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 999;
+  transition: opacity 0.5s;
+}
+
+.loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+.spinner {
+  width: 48px; height: 48px;
+  border: 3px solid rgba(57,208,216,0.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text {
+  font-family: var(--font-head);
+  font-size: 15px;
+  color: var(--text-muted);
 }
 </style>
 </head>
-
 <body>
 
-<div class="container">
-
-<!-- LEFT -->
-<div class="panel">
-  <h2>Marine Life Detector</h2>
-
-  <input type="file" id="imageUpload" accept="image/*">
-
-  <button onclick="startCamera()">Open Camera</button>
-  <button onclick="captureImage()">Capture</button>
-
-  <video id="camera" autoplay playsinline></video>
-
-  <canvas id="canvasCapture" style="display:none"></canvas>
-
-  <h2 style="margin-top:20px;font-size:16px;">Prediction History</h2>
-  <div id="history" class="history"></div>
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Loading AI model…</div>
 </div>
 
-<!-- RIGHT -->
-<div class="panel">
-  <h2>Marine Life</h2>
+<!-- Header -->
+<header>
+  <div class="logo-ring">🐠</div>
+  <h1>Marine <span>Detector</span></h1>
+  <p>AI-powered marine species identification</p>
+</header>
 
-  <div class="preview-box">
-    <div>
-      <p>Camera</p>
-      <img id="cameraPreview">
+<main class="main">
+
+  <!-- Desktop grid wrapper -->
+  <div class="desktop-grid">
+
+    <!-- Camera / Upload Card -->
+    <div class="card" id="captureCard">
+      <div class="card-label">📷 Image Input</div>
+
+      <div class="image-area" id="imageArea">
+        <div class="image-placeholder" id="placeholder">
+          <div class="icon">🌊</div>
+          <div>Tap to upload or use camera</div>
+        </div>
+        <video id="camera" autoplay playsinline></video>
+        <img id="previewImg" style="display:none;">
+        <div class="scan-line" id="scanLine"></div>
+      </div>
+
+      <canvas id="canvasCapture"></canvas>
+
+      <div class="btn-row">
+        <label class="upload-label">
+          <span class="btn-icon">🖼️</span> Upload
+          <input type="file" id="imageUpload" accept="image/*">
+        </label>
+
+        <button class="btn btn-secondary" onclick="startCamera()" id="btnCamera">
+          <span class="btn-icon">📹</span> Camera
+        </button>
+
+        <button class="btn btn-full" onclick="captureImage()" id="btnCapture" style="display:none;">
+          <span class="btn-icon">⚡</span> Capture & Detect
+        </button>
+      </div>
+
+      <!-- Status -->
+      <div class="status-badge" id="statusBadge">
+        <div class="dot"></div>
+        <span id="statusText">Loading model…</span>
+      </div>
     </div>
 
-    <div>
-      <p>Upload</p>
-      <img id="uploadPreview">
+    <!-- Result Card -->
+    <div class="card result-card" id="resultCard">
+      <div class="card-label">🔬 Detection Result</div>
+
+      <div id="resultContent">
+        <div class="result-empty">
+          <div class="em-icon">🐙</div>
+          <div>Capture or upload an image<br>to identify marine life</div>
+        </div>
+      </div>
+
+      <div id="bars" class="bar-list" style="margin-top:16px;"></div>
+    </div>
+
+  </div>
+
+  <!-- History Card -->
+  <div class="card">
+    <div class="card-label">🕘 Detection History</div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty">No detections yet</div>
     </div>
   </div>
 
-  <div id="result">Loading model...</div>
-
-  <div id="bars" class="bar-container"></div>
-</div>
-
-</div>
+</main>
 
 <script>
-const URL = "https://teachablemachine.withgoogle.com/models/0M67tI_Pt/";
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const MODEL_URL = "https://teachablemachine.withgoogle.com/models/0M67tI_Pt/";
 
-let model, ready=false;
+/* species emoji map — extend as needed */
+const EMOJI_MAP = {
+  "fish":        "🐟",
+  "shark":       "🦈",
+  "dolphin":     "🐬",
+  "turtle":      "🐢",
+  "jellyfish":   "🪼",
+  "octopus":     "🐙",
+  "crab":        "🦀",
+  "coral":       "🪸",
+  "seahorse":    "🐠",
+  "default":     "🌊"
+};
 
-const camera = document.getElementById("camera");
-const cameraPreview = document.getElementById("cameraPreview");
-const uploadPreview = document.getElementById("uploadPreview");
-const canvasCapture = document.getElementById("canvasCapture");
+function getEmoji(name) {
+  const lower = name.toLowerCase();
+  for (const [key, emoji] of Object.entries(EMOJI_MAP)) {
+    if (lower.includes(key)) return emoji;
+  }
+  return EMOJI_MAP.default;
+}
 
-const result = document.getElementById("result");
-const bars = document.getElementById("bars");
-const history = document.getElementById("history");
+/* ============================================================
+   ELEMENT REFS
+   ============================================================ */
+const camera       = document.getElementById("camera");
+const previewImg   = document.getElementById("previewImg");
+const canvasCapture= document.getElementById("canvasCapture");
+const imageArea    = document.getElementById("imageArea");
+const placeholder  = document.getElementById("placeholder");
+const resultContent= document.getElementById("resultContent");
+const barsContainer= document.getElementById("bars");
+const historyList  = document.getElementById("historyList");
+const statusBadge  = document.getElementById("statusBadge");
+const statusText   = document.getElementById("statusText");
+const loadingOverlay=document.getElementById("loadingOverlay");
+const btnCapture   = document.getElementById("btnCapture");
+const btnCamera    = document.getElementById("btnCamera");
 
-// LOAD MODEL
-async function loadModel(){
-  model = await tmImage.load(URL+"model.json", URL+"metadata.json");
-  ready = true;
-  result.innerText = "Model Ready";
+/* ============================================================
+   MODEL
+   ============================================================ */
+let model = null;
+let ready = false;
+let cameraActive = false;
+
+async function loadModel() {
+  try {
+    model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+    ready = true;
+    setStatus("Model ready", "ready");
+    loadingOverlay.classList.add("hidden");
+  } catch (e) {
+    setStatus("Model failed to load", "error");
+    loadingOverlay.classList.add("hidden");
+  }
 }
 
 loadModel();
 
-// REGISTER SERVICE WORKER ✅ (FIXED POSITION)
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
+function setStatus(msg, type = "") {
+  statusText.textContent = msg;
+  statusBadge.className = "status-badge " + type;
 }
 
-// HISTORY
-function addHistory(source, best, confidence){
-  const time = new Date().toLocaleTimeString();
-
-  const item = document.createElement("div");
-  item.className = "log-item";
-
-  item.innerHTML = `
-    <div class="log-title">${source} DETECTION</div>
-    <div>Class: <b>${best}</b></div>
-    <div>Confidence: <b>${confidence}%</b></div>
-    <div style="opacity:0.6;font-size:11px;">${time}</div>
-  `;
-
-  history.prepend(item);
-}
-
-// PREDICT
-async function predict(img){
-  if(!ready) return;
-
-  const predictions = await model.predict(img);
-
-  let best = predictions.reduce((a,b)=>a.probability>b.probability?a:b);
-  const confidence = (best.probability*100).toFixed(2);
-
-  result.innerHTML = `${best.className} (${confidence}%)`;
-
-  let sourceType = (img.id === "cameraPreview") ? "CAMERA" : "UPLOAD";
-
-  addHistory(sourceType, best.className, confidence);
-
-  bars.innerHTML = "";
-
-  predictions
-    .sort((a,b)=>b.probability - a.probability)
-    .forEach((p,i)=>{
-
-      const percent = (p.probability*100).toFixed(2);
-
-      const r = Math.floor(76 + (179 * p.probability));
-      const g = 201;
-      const b = Math.floor(240 - (120 * p.probability));
-
-      const color = `rgb(${r},${g},${b})`;
-
-      bars.innerHTML += `
-        <div class="bar">
-          <div class="label">
-            <span>${p.className}</span>
-            <span>${percent}%</span>
-          </div>
-
-          <div class="progress">
-            <div class="fill" id="bar-${i}"
-              style="background:linear-gradient(90deg,${color},#7b2cbf)">
-            </div>
-          </div>
-        </div>
-      `;
+/* ============================================================
+   CAMERA
+   ============================================================ */
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 960 } }
     });
-
-  setTimeout(()=>{
-    predictions.forEach((p,i)=>{
-      const percent = (p.probability*100).toFixed(2);
-      const bar = document.getElementById(`bar-${i}`);
-      if(bar) bar.style.width = percent + "%";
-    });
-  },50);
+    camera.srcObject = stream;
+    camera.style.display = "block";
+    previewImg.style.display = "none";
+    placeholder.style.display = "none";
+    btnCapture.style.display = "flex";
+    btnCamera.style.display = "none";
+    cameraActive = true;
+    setStatus("Camera active — tap Capture", "ready");
+  } catch (e) {
+    setStatus("Camera permission denied", "error");
+  }
 }
 
-// CAMERA
-async function startCamera(){
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video:{facingMode:"environment"}
-  });
-  camera.srcObject = stream;
-}
-
-// CAPTURE
-function captureImage(){
+function captureImage() {
+  if (!cameraActive) return;
   const ctx = canvasCapture.getContext("2d");
+  canvasCapture.width  = camera.videoWidth  || 300;
+  canvasCapture.height = camera.videoHeight || 225;
+  ctx.drawImage(camera, 0, 0, canvasCapture.width, canvasCapture.height);
 
-  canvasCapture.width = 300;
-  canvasCapture.height = 220;
+  const dataURL = canvasCapture.toDataURL("image/jpeg", 0.92);
+  previewImg.src = dataURL;
+  previewImg.style.display = "block";
+  camera.style.display = "none";
+  placeholder.style.display = "none";
 
-  ctx.drawImage(camera,0,0,300,220);
+  /* stop camera stream */
+  if (camera.srcObject) {
+    camera.srcObject.getTracks().forEach(t => t.stop());
+    camera.srcObject = null;
+  }
+  cameraActive = false;
+  btnCapture.style.display = "none";
+  btnCamera.style.display = "flex";
 
-  cameraPreview.src = canvasCapture.toDataURL();
-  cameraPreview.onload = ()=>predict(cameraPreview);
+  previewImg.onload = () => runPrediction(previewImg, "Camera");
 }
 
-// UPLOAD
-document.getElementById("imageUpload").onchange=e=>{
-  const file=e.target.files[0];
-  const reader=new FileReader();
-
-  reader.onload=ev=>{
-    uploadPreview.src=ev.target.result;
-    uploadPreview.onload=()=>predict(uploadPreview);
+/* ============================================================
+   UPLOAD
+   ============================================================ */
+document.getElementById("imageUpload").onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    previewImg.src = ev.target.result;
+    previewImg.style.display = "block";
+    camera.style.display = "none";
+    placeholder.style.display = "none";
+    btnCapture.style.display = "none";
+    btnCamera.style.display = "flex";
+    previewImg.onload = () => runPrediction(previewImg, "Upload");
   };
-
   reader.readAsDataURL(file);
 };
+
+/* ============================================================
+   PREDICTION
+   ============================================================ */
+async function runPrediction(imgEl, source) {
+  if (!ready) { setStatus("Model not ready yet", "error"); return; }
+
+  /* scan animation */
+  imageArea.classList.add("scanning");
+  setStatus("Analyzing…", "");
+
+  try {
+    const predictions = await model.predict(imgEl);
+    const sorted = [...predictions].sort((a,b) => b.probability - a.probability);
+    const best = sorted[0];
+    const confidence = (best.probability * 100).toFixed(1);
+
+    showResult(best.className, confidence, getEmoji(best.className));
+    showBars(sorted);
+    addHistory(source, best.className, confidence, getEmoji(best.className));
+    setStatus(`Detected: ${best.className}`, "ready");
+  } catch (err) {
+    setStatus("Prediction failed", "error");
+  }
+
+  imageArea.classList.remove("scanning");
+}
+
+/* ============================================================
+   UI: RESULT
+   ============================================================ */
+function showResult(name, confidence, emoji) {
+  resultContent.innerHTML = `
+    <div class="result-hero">
+      <div class="result-icon">${emoji}</div>
+      <div>
+        <div class="result-name">${name}</div>
+        <div class="result-conf">${confidence}% confidence</div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   UI: BARS
+   ============================================================ */
+function showBars(sorted) {
+  barsContainer.innerHTML = sorted.map((p, i) => {
+    const pct = (p.probability * 100).toFixed(1);
+    return `
+      <div class="bar-item">
+        <div class="bar-meta">
+          <span class="bar-name">${p.className}</span>
+          <span>${pct}%</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" id="bf-${i}" style="width:0%"></div>
+        </div>
+      </div>`;
+  }).join("");
+
+  /* animate after paint */
+  requestAnimationFrame(() => {
+    sorted.forEach((p, i) => {
+      const el = document.getElementById(`bf-${i}`);
+      if (el) el.style.width = (p.probability * 100).toFixed(1) + "%";
+    });
+  });
+}
+
+/* ============================================================
+   UI: HISTORY
+   ============================================================ */
+let historyEmpty = true;
+
+function addHistory(source, name, confidence, emoji) {
+  if (historyEmpty) {
+    historyList.innerHTML = "";
+    historyEmpty = false;
+  }
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const item = document.createElement("div");
+  item.className = "history-item";
+  item.innerHTML = `
+    <div class="h-icon">${emoji}</div>
+    <div class="h-info">
+      <div class="h-name">${name}</div>
+      <div class="h-meta">${source} · ${time}</div>
+    </div>
+    <div class="h-conf">${confidence}%</div>
+  `;
+  historyList.prepend(item);
+}
+
+/* ============================================================
+   SERVICE WORKER
+   ============================================================ */
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js").catch(() => {});
+}
 </script>
 
 </body>
